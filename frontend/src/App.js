@@ -1,71 +1,32 @@
-import React, { Component } from 'react';
-import './App.css';
-import CustomModal from './components/Modal';
-
-
-const taskList = [
-  {
-    id: 1,
-    title: "Read Book",
-    description: "Read a book for at least 30 minutes",
-    completed: false
-  },
-  {
-    id: 2,
-    title: "Play Guitar",
-    description: "Play guitar for at least 30 minutes",
-    completed: true
-  },
-  {
-    id: 3,
-    title: "Walk",
-    description: "Take a walk around the neighbourhood",
-    completed: false
-  },
-  
-]
+import React, { Component } from "react";
+import CustomModal from "./components/Modal";
+import axios from 'axios';  
 
 class App extends Component {
   constructor(props) {
     super(props);
-    this.state= {
-      CustomModal:false,
-      viewCompleted:false,
-      taskList: taskList,
+    this.state = {
+      viewCompleted: false,
       activeItem: {
-        title : "",
-        description : "",
-        completed : false,
+        title: "",
+        description: "",
+        completed: false
       },
+      taskList: []
     };
   }
 
-  toggle = () => {
-    this.setState({ CustomModal : !this.state.CustomModal });
-  };
-
-  handleSubmit = item => {
-    this.toggle();
-    alert('Saved!' + JSON.stringify(item));
-  };
-
-  handleDelete = item => {
-    alert('Deleted' + JSON.stringify(item));
-  };
-
-  createItem = () => {
-    const item = { title: "", CustomModal: !this.state.CustomModal };
-    this.setState({ activeItem: item, CustomModal: !this.state.CustomModal });
-  };
-
-  editItem = item => {
-    this.setState({ activeItem: item, CustomModal: !this.state.CustomModal });
+  componentDidMount() {
+    this.refreshList();
   }
 
-
-
-
-
+ 
+  refreshList = () => {
+    axios
+      .get("http://127.0.0.1:8000/api/tasks/")
+      .then(res => this.setState({ taskList: res.data }))
+      .catch(err => console.log(err));
+  };
 
 
   displayCompleted = status => {
@@ -75,53 +36,105 @@ class App extends Component {
     return this.setState({ viewCompleted: false });
   };
 
+
   renderTabList = () => {
     return (
       <div className="my-5 tab-list">
         <span
           onClick={() => this.displayCompleted(true)}
           className={this.state.viewCompleted ? "active" : ""}
-         >
-        Completed
-        </span>
+        >
+          completed
+            </span>
         <span
           onClick={() => this.displayCompleted(false)}
           className={this.state.viewCompleted ? "" : "active"}
-         >
-        Incomplete
-        </span>
+        >
+          Incompleted
+            </span>
       </div>
     );
   };
 
+ 
   renderItems = () => {
     const { viewCompleted } = this.state;
     const newItems = this.state.taskList.filter(
       item => item.completed === viewCompleted
     );
-
     return newItems.map(item => (
-      <li key={item.id} className="list-group-item d-flex justify-content-between align-items-center">
-        <span className={`todo-title me-2 ${this.state.viewCompleted ? "completed-todo" : ""}`} title={item.title}>
+      <li
+        key={item.id}
+        className="list-group-item d-flex justify-content-between align-items-center"
+      >
+        <span
+          className={`todo-title mr-2 ${this.state.viewCompleted ? "completed-todo" : ""
+            }`}
+          title={item.description}
+        >
           {item.title}
         </span>
         <span>
-          <button className="btn btn-info me-2">Edit</button>
-          <button className="btn btn-danger">Delete</button>
+          <button
+            onClick={() => this.editItem(item)}
+            className="btn btn-secondary mr-2"
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => this.handleDelete(item)}
+            className="btn btn-danger"
+          >
+            Delete
+          </button>
         </span>
       </li>
     ));
+  };
+
+  toggle = () => {
+    this.setState({ CustomModal: !this.state.CustomModal });
+  };
+ 
+  handleSubmit = item => {
+    this.toggle();
+    if (item.id) {
+      axios
+        .put(`http://127.0.0.1:8000/api/tasks/${item.id}/`, item)
+        .then(res => this.refreshList());
+      return;
+    }
+    axios
+      .post("http://127.0.0.1:8000/api/tasks/", item)
+      .then(res => this.refreshList());
+  };
+
+  handleDelete = item => {
+    axios
+      .delete(`http://127.0.0.1:8000/api/tasks/${item.id}/`)
+      .then(res => this.refreshList());
+  };
+
+  createItem = () => {
+    const item = { title: "", description: "", completed: false };
+    this.setState({ activeItem: item, CustomModal: !this.state.CustomModal });
+  };
+
+  editItem = item => {
+    this.setState({ activeItem: item, CustomModal: !this.state.CustomModal });
   };
 
   render() {
     return (
       <main className="content p-3 mb-2 bg-info">
         <h1 className="text-white text-uppercase text-center my-4">Task Manager</h1>
-        <div className="row">
-          <div className="col-md-6 col-sma-10 mx-auto p-0">
+        <div className="row ">
+          <div className="col-md-6 col-sm-10 mx-auto p-0">
             <div className="card p-3">
-              <div>
-                <button className="btn btn-warning">Add Task</button>
+              <div className="">
+                <button onClick={this.createItem} className="btn btn-warning">
+                  Add task
+                    </button>
               </div>
               {this.renderTabList()}
               <ul className="list-group list-group-flush">
@@ -132,12 +145,15 @@ class App extends Component {
         </div>
         <footer className="my-3 mb-2 bg-info text-white text-center">Copyright 2024 &copy; All Rights Reserved</footer>
         {this.state.CustomModal ? (
-          <CustomModal activeItem={this.state.activeItem} toggle={this.toggle} onSave={this.handleSubmit} />
+          <CustomModal
+            activeItem={this.state.activeItem}
+            toggle={this.toggle}
+            onSave={this.handleSubmit}
+          />
         ) : null}
       </main>
     );
   }
 }
-
 export default App;
 
